@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/github"
@@ -29,6 +32,19 @@ var (
 
 var homedir string
 var update bool
+var params string
+
+type repository struct {
+	Name        string    `json:"name"`
+	FullName    string    `json:"fullname"`
+	Description string    `json:"description"`
+	Owner       string    `json:"owner"`
+	StartCount  int       `json:"start_count"`
+	URL         string    `json:"url"`
+	PushedAt    time.Time `json:"pushed_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
 
 func init() {
 	dir, err := home.Dir()
@@ -38,16 +54,12 @@ func init() {
 	homedir = dir
 
 	flag.BoolVar(&update, "u", false, "get and update repositories")
+	flag.StringVar(&params, "p", "", "print paramters")
 
 	flag.Parse()
 }
 
-func getToken() (string, error) {
-	tkn := os.Getenv(tokenName)
-	if tkn != "" {
-		return tkn, nil
-	}
-
+func getTokenFromHub() (string, error) {
 	// try to read hub config file.
 	cfg := filepath.Join(homedir, ".config", "hub")
 	f, err := os.Open(cfg)
@@ -76,7 +88,16 @@ func getToken() (string, error) {
 	return "", errTokenNotFound
 }
 
-func readCache() ([]string, error) {
+func getToken() (string, error) {
+	tkn := os.Getenv(tokenName)
+	if tkn != "" {
+		return tkn, nil
+	}
+
+	return getTokenFromHub()
+}
+
+func readCache() ([]repository, error) {
 	// try to read cache file.
 	cache := filepath.Join(homedir, cacheFileName)
 	fi, err := os.Stat(cache)
@@ -94,25 +115,99 @@ func readCache() ([]string, error) {
 	}
 	defer f.Close()
 
-	lines := make([]string, 0)
+	bufs := make([]repository, 0)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		var r repository
+		b := scanner.Text()
+		if err := json.Unmarshal([]byte(b), &r); err != nil {
+			return nil, err
+		}
+		bufs = append(bufs, r)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
-	return lines, nil
+	return bufs, nil
 }
 
-func printRepositories(out io.Writer, repos []string) {
+type printer interface {
+	Print(repository) error
+}
+
+type multiprinter struct {
+	printers []printer
+}
+
+func (p *multiprinter) Print(repo repository) error {
+	for _, p := range p.printers {
+		p.Print(repo)
+	}
+	return nil
+}
+
+type stdprinter struct {
+	io.Writer
+	params string
+}
+
+func (p *stdprinter) Print(repo repository) error {
+	parts := strings.Split(p.params, ",")
+
+	buf := make([]string, 0)
+	for _, v := range parts {
+		switch strings.ToLower(v) {
+		case "name":
+			buf = append(buf, repo.Name)
+		case "fullname":
+			buf = append(buf, repo.FullName)
+		case "owner":
+			buf = append(buf, repo.Owner)
+		case "star_count":
+			buf = append(buf, strconv.Itoa(repo.StartCount))
+		case "pushed_at":
+			buf = append(buf, repo.PushedAt.String())
+		case "created_at":
+			buf = append(buf, repo.CreatedAt.String())
+		case "updated_at":
+			buf = append(buf, repo.UpdatedAt.String())
+		case "description":
+			buf = append(buf, repo.Description)
+		case "url":
+			buf = append(buf, repo.URL)
+		}
+	}
+
+	if len(buf) > 0 {
+		_, err := fmt.Fprintln(p.Writer, strings.Join(buf, " "))
+		return err
+	}
+
+	_, err := fmt.Fprintln(p.Writer, repo.FullName)
+	return err
+}
+
+type jsonprinter struct {
+	io.Writer
+}
+
+func (p *jsonprinter) Print(repo repository) error {
+	buf, err := json.Marshal(repo)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(p.Writer, string(buf))
+	return err
+}
+
+func printRepositories(p printer, repos []repository) {
 	for _, v := range repos {
-		fmt.Fprintln(out, v)
+		p.Print(v)
 	}
 }
 
-func listGithubRepositories(token string) ([]string, error) {
+func listGithubRepositories(token string) ([]repository, error) {
 	ctx := context.Background()
 
 	tkn, err := getToken()
@@ -128,7 +223,7 @@ func listGithubRepositories(token string) ([]string, error) {
 	opt.Page = 1
 	opt.PerPage = 100
 
-	names := make([]string, 0)
+	repositories := make([]repository, 0)
 	for {
 		repos, res, err := client.Repositories.List(ctx, "", opt)
 		if err != nil {
@@ -136,7 +231,18 @@ func listGithubRepositories(token string) ([]string, error) {
 		}
 
 		for _, repo := range repos {
-			names = append(names, *repo.FullName)
+			r := repository{
+				Name:        repo.GetName(),
+				FullName:    repo.GetFullName(),
+				Description: repo.GetDescription(),
+				Owner:       repo.GetOwner().GetLogin(),
+				StartCount:  repo.GetStargazersCount(),
+				PushedAt:    repo.GetPushedAt().UTC(),
+				URL:         repo.GetHTMLURL(),
+				CreatedAt:   repo.GetCreatedAt().UTC(),
+				UpdatedAt:   repo.GetUpdatedAt().UTC(),
+			}
+			repositories = append(repositories, r)
 		}
 
 		if res.NextPage == 0 {
@@ -146,13 +252,14 @@ func listGithubRepositories(token string) ([]string, error) {
 		opt.Page = res.NextPage
 	}
 
-	return names, nil
+	return repositories, nil
 }
 
 func main() {
+	stdp := &stdprinter{Writer: os.Stdout, params: params}
 	if !update {
 		if caches, err := readCache(); err == nil {
-			printRepositories(os.Stdout, caches)
+			printRepositories(stdp, caches)
 			os.Exit(0)
 		}
 	}
@@ -163,16 +270,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	var w io.Writer = os.Stdout
+	var mp *multiprinter
 	repos, err := listGithubRepositories(tkn)
 	cache := filepath.Join(homedir, cacheFileName)
 	f, err := os.OpenFile(cache, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err == nil {
-		w = io.MultiWriter(os.Stdout, f)
 		defer f.Close()
+		mp = &multiprinter{printers: []printer{stdp, &jsonprinter{f}}}
 	} else {
-		fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "cannot open cache file due to %s", err)
 	}
 
-	printRepositories(w, repos)
+	printRepositories(mp, repos)
 }
