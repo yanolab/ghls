@@ -44,11 +44,12 @@ jobs:
             go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
             go get -u github.com/golang/lint/golint
             go get -u honnef.co/go/tools/cmd/staticcheck
+            go get -u github.com/client9/misspell/cmd/misspell
             sudo chown circleci:circleci /go/bin ## This is workaround. see: https://github.com/golangci/golangci-lint/issues/250
             curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.13.2
       - run:
           name: review
-          command: reviewdog -reporter=github-pr-check -diff="git diff master"
+          command: reviewdog -reporter=github-pr-review -diff="git diff master"
   test:
     executor:
       name: default
