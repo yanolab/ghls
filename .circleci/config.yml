@@ -46,8 +46,8 @@ jobs:
       - run:
           name: review
           command: |
-            go vet ./... 2>&1 | reviewdog -f=govet -reporter=github-pr-check
-            golint ./... 2>&1 | reviewdog -f=golint -reporter=github-pr-check
+            go vet ./... 2>&1 | reviewdog -f=govet -reporter=github-pr-check -diff="git diff master"
+            golint ./... 2>&1 | reviewdog -f=golint -reporter=github-pr-check -diff="git diff master"
   test:
     executor:
       name: default
