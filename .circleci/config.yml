@@ -22,6 +22,7 @@ jobs:
       name: default
     steps:
       - checkout
+      - restore_pkg_cache
       - run:
           name: build
           command: go build -race -o /dev/null
@@ -61,11 +62,11 @@ workflows:
           filters: &default_filter
             branches:
               only: /.*/
-      - review:
-          requires:
-            - build
-          filters: *default_filter
       - test:
           requires:
             - build
+          filters: *default_filter
+      - review:
+          requires:
+            - test
           filters: *default_filter
