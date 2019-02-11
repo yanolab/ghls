@@ -1,0 +1,76 @@
+version: 2.1
+
+executors:
+  default:
+    working_directory: /go/src/github.com/yanolab/ghls
+    docker:
+      - image: circleci/golang:1.11-stretch
+    environment:
+      GO111MODULE: "on"
+
+commands:
+  restore_pkg_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-pkg-cache-{{ checksum "go.sum" }}
+            - v1-pkg-cache-
+
+jobs:
+  build:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - restore_pkg_cache
+      - run:
+          name: build
+          command: go build -race -o /dev/null
+      - save_cache:
+          key: v1-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg"
+  review:
+    executor:
+      name: default
+    environment:
+
+    steps:
+      - checkout
+      - restore_pkg_cache
+      - run:
+          name: Setup reviewdog
+          command: |
+            go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+            go get -u github.com/golang/lint/golint
+            go get -u honnef.co/go/tools/cmd/staticcheck
+            sudo chown circleci:circleci /go/bin ## This is workaround. see: https://github.com/golangci/golangci-lint/issues/250
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.13.2
+      - run:
+          name: review
+          command: reviewdog -reporter=github-pr-check -diff="git diff master"
+  test:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - restore_pkg_cache
+      - run:
+          name: test
+          command: go test -v ./...
+
+workflows:
+  build-and-test:
+    jobs:
+      - build:
+          filters: &default_filter
+            branches:
+              only: /.*/
+      - test:
+          requires:
+            - build
+          filters: *default_filter
+      - review:
+          requires:
+            - test
+          filters: *default_filter
