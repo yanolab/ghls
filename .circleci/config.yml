@@ -43,11 +43,15 @@ jobs:
           command: |
             go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
             go get -u github.com/golang/lint/golint
+            go get -u honnef.co/go/tools/cmd/staticcheck
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.13.2
       - run:
           name: review
           command: |
-            go vet ./... 2>&1 | reviewdog -f=govet -reporter=github-pr-check -diff="git diff master"
-            golint ./... 2>&1 | reviewdog -f=golint -reporter=github-pr-check -diff="git diff master"
+            go vet $(go list ./...) 2>&1 | reviewdog -f=govet -reporter=github-pr-check -diff="git diff master"
+            golint $(go list ./...) 2>&1 | reviewdog -f=golint -reporter=github-pr-check -diff="git diff master"
+            staticcheck -tests=false $(go list ./...) | reviewdog -f=staticcheck -name="staticcheck" -diff="git diff master"
+            golangci-lint
   test:
     executor:
       name: default
