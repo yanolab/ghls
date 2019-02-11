@@ -39,12 +39,15 @@ jobs:
       - checkout
       - restore_pkg_cache
       - run:
-          name: setup reviewdog
-          command: go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+          name: Setup reviewdog
+          command: |
+            go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+            go get -u github.com/golang/lint/golint
       - run:
           name: review
           command: |
             go vet ./... 2>&1 | reviewdog -f=govet -reporter=github-pr-check
+            golint ./... 2>&1 | reviewdog -f=golint -reporter=github-pr-check
   test:
     executor:
       name: default
