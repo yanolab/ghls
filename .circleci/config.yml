@@ -44,7 +44,7 @@ jobs:
       - run:
           name: review
           command: |
-            go vet ./... 2>&1 | ./reviewdog -f=govet -reporter=github-pr-check
+            go vet ./... 2>&1 | reviewdog -f=govet -reporter=github-pr-check
   test:
     executor:
       name: default
