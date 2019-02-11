@@ -1,0 +1,64 @@
+version: 2.1
+
+executors:
+  default:
+    working_directory: /go/src/github.com/yanolab/ghls
+    docker:
+      - image: circleci/golang:1.11-stretch
+    environment:
+      GO111MODULE: "on"
+
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - run:
+          name: Setup Environment Variables
+          command: echo 'export PATH="$GOPATH/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Installing dependency tools
+          command: make init && make migration/setup
+      - save_cache:
+          key: v1-pkg-cache-{{ checksum "Gopkg.lock" }}
+          paths:
+            - "/go/pkg"
+            - "/go/src/github.com/kouzoh/merpay-santa-service/vendor"
+
+jobs:
+  build:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: go build -race -o /dev/null
+      - save_cache:
+          key: v1-pkg-cache-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg"
+  test:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-pkg-cache-{{ checksum "go.sum" }}
+            - v1-pkg-cache-
+      - run:
+          name: test
+          command: go test -v ./...
+
+workflows:
+  build-and-test:
+    jobs:
+      - build:
+          filters: &default_filter
+            branches:
+              only: /.*/
+      - test:
+          requires:
+            - build
+          filters: *default_filter
