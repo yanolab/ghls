@@ -49,7 +49,7 @@ jobs:
       name: default
     steps:
       - checkout
-      - restore_cache: *restore_pkg_cache
+      - restore_pkg_cache
       - run:
           name: test
           command: go test -v ./...
