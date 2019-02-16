@@ -21,7 +21,7 @@ func init() {
 	homedir = dir
 
 	flag.BoolVar(&update, "u", false, "get and update repositories")
-	flag.StringVar(&params, "p", "", "print paramters")
+	flag.StringVar(&params, "p", "", "print value by paramters")
 
 	flag.Parse()
 }
@@ -33,9 +33,11 @@ func printRepositories(p printer, repos []repository) {
 }
 
 func main() {
-	stdp := &stdprinter{Writer: os.Stdout, params: params}
+	stdp := &ioprinter{w: os.Stdout, params: params}
 	if !update {
-		if caches, err := readCache(); err == nil {
+		// try to read cache file.
+		p := filepath.Join(homedir, cacheFileName)
+		if caches, err := readCache(p); err == nil {
 			printRepositories(stdp, caches)
 			os.Exit(0)
 		}

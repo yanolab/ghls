@@ -25,7 +25,7 @@ type repository struct {
 	FullName    string    `json:"fullname"`
 	Description string    `json:"description"`
 	Owner       string    `json:"owner"`
-	StartCount  int       `json:"start_count"`
+	Stars       int       `json:"stars"`
 	URL         string    `json:"url"`
 	PushedAt    time.Time `json:"pushed_at"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -99,7 +99,7 @@ func listGithubRepositories(token string) ([]repository, error) {
 				FullName:    repo.GetFullName(),
 				Description: repo.GetDescription(),
 				Owner:       repo.GetOwner().GetLogin(),
-				StartCount:  repo.GetStargazersCount(),
+				Stars:       repo.GetStargazersCount(),
 				PushedAt:    repo.GetPushedAt().UTC(),
 				URL:         repo.GetHTMLURL(),
 				CreatedAt:   repo.GetCreatedAt().UTC(),

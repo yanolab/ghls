@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -17,10 +16,8 @@ var (
 	errCacheIsExpired = errors.New("cache is expired")
 )
 
-func readCache() ([]repository, error) {
-	// try to read cache file.
-	cache := filepath.Join(homedir, cacheFileName)
-	fi, err := os.Stat(cache)
+func readCache(p string) ([]repository, error) {
+	fi, err := os.Stat(p)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +26,7 @@ func readCache() ([]repository, error) {
 		return nil, errCacheIsExpired
 	}
 
-	f, err := os.Open(cache)
+	f, err := os.Open(p)
 	if err != nil {
 		return nil, err
 	}
