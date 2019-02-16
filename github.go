@@ -34,7 +34,7 @@ type repository struct {
 
 func getTokenFromHub() (string, error) {
 	// try to read hub config file.
-	cfg := filepath.Join(homedir, ".config", "hub")
+	cfg := filepath.Join(params.homedir, ".config", "hub")
 	f, err := os.Open(cfg)
 	if err != nil {
 		return "", err
@@ -70,19 +70,43 @@ func getToken() (string, error) {
 	return getTokenFromHub()
 }
 
-func listGithubRepositories(token string) ([]repository, error) {
+type listOptions struct {
+	user  string
+	token string
+}
+
+type listOption func(*listOptions)
+
+func withUser(user string) listOption {
+	return func(o *listOptions) {
+		o.user = user
+	}
+}
+
+func withToken(token string) listOption {
+	return func(o *listOptions) {
+		o.token = token
+	}
+}
+
+func listGithubRepositories(opts ...listOption) ([]repository, error) {
+	opt := &listOptions{}
+	for _, f := range opts {
+		f(opt)
+	}
+
 	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: opt.token})
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	opt := new(github.RepositoryListOptions)
-	opt.Page = 1
-	opt.PerPage = 100
+	lstopt := new(github.RepositoryListOptions)
+	lstopt.Page = 1
+	lstopt.PerPage = 100
 
 	repositories := make([]repository, 0)
 	for {
-		repos, res, err := client.Repositories.List(ctx, "", opt)
+		repos, res, err := client.Repositories.List(ctx, opt.user, lstopt)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +130,7 @@ func listGithubRepositories(token string) ([]repository, error) {
 			break
 		}
 
-		opt.Page = res.NextPage
+		lstopt.Page = res.NextPage
 	}
 
 	return repositories, nil

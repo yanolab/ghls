@@ -9,19 +9,29 @@ import (
 	home "github.com/mitchellh/go-homedir"
 )
 
-var homedir string
-var update bool
-var params string
+type _params struct {
+	homedir      string
+	update       bool
+	params       string
+	user         string
+	disableCache bool
+	cleanCache   bool
+}
+
+var params _params
 
 func init() {
 	dir, err := home.Dir()
 	if err != nil {
 		panic("cannot find homedir")
 	}
-	homedir = dir
+	params.homedir = dir
 
-	flag.BoolVar(&update, "u", false, "get and update repositories")
-	flag.StringVar(&params, "p", "", "print value by paramters")
+	flag.BoolVar(&params.update, "u", false, "get and update repositories")
+	flag.StringVar(&params.params, "p", "", "print value by paramters")
+	flag.StringVar(&params.user, "user", "", "target user")
+	flag.BoolVar(&params.disableCache, "disablecache", false, "caching is disable")
+	flag.BoolVar(&params.cleanCache, "cleancache", false, "clean cache")
 
 	flag.Parse()
 }
@@ -33,10 +43,19 @@ func printRepositories(p printer, repos []repository) {
 }
 
 func main() {
-	stdp := &ioprinter{w: os.Stdout, params: params}
-	if !update {
+	if params.cleanCache {
+		p := filepath.Join(params.homedir, cacheFileName)
+		if err := os.Remove(p); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to clean cache due to %v", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	stdp := &ioprinter{w: os.Stdout, params: params.params}
+	if !params.update && !params.disableCache {
 		// try to read cache file.
-		p := filepath.Join(homedir, cacheFileName)
+		p := filepath.Join(params.homedir, cacheFileName)
 		if caches, err := readCache(p); err == nil {
 			printRepositories(stdp, caches)
 			os.Exit(0)
@@ -49,20 +68,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	opts := []listOption{
+		withUser(params.user),
+		withToken(tkn),
+	}
+
 	var mp *multiprinter
-	repos, err := listGithubRepositories(tkn)
+	repos, err := listGithubRepositories(opts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get repositories due to %s\n", err)
 		os.Exit(1)
 	}
-	cache := filepath.Join(homedir, cacheFileName)
-	f, err := os.OpenFile(cache, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-	if err == nil {
-		defer f.Close()
-		mp = &multiprinter{printers: []printer{stdp, &jsonprinter{f}}}
-	} else {
-		fmt.Fprintf(os.Stderr, "cannot open cache file due to %s", err)
+	printers := make([]printer, 0, 1)
+	printers = append(printers, stdp)
+	if !params.disableCache {
+		cache := filepath.Join(params.homedir, cacheFileName)
+		f, err := os.OpenFile(cache, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+		if err == nil {
+			defer f.Close()
+			printers = append(printers, &jsonprinter{f})
+		} else {
+			fmt.Fprintf(os.Stderr, "cannot open cache file due to %s", err)
+		}
 	}
+	mp = &multiprinter{printers: printers}
 
 	printRepositories(mp, repos)
 }
