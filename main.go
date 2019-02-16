@@ -21,7 +21,7 @@ func init() {
 	homedir = dir
 
 	flag.BoolVar(&update, "u", false, "get and update repositories")
-	flag.StringVar(&params, "p", "", "print paramters")
+	flag.StringVar(&params, "p", "", "print value by paramters")
 
 	flag.Parse()
 }
@@ -33,9 +33,11 @@ func printRepositories(p printer, repos []repository) {
 }
 
 func main() {
-	stdp := &stdprinter{Writer: os.Stdout, params: params}
+	stdp := &ioprinter{w: os.Stdout, params: params}
 	if !update {
-		if caches, err := readCache(); err == nil {
+		// try to read cache file.
+		p := filepath.Join(homedir, cacheFileName)
+		if caches, err := readCache(p); err == nil {
 			printRepositories(stdp, caches)
 			os.Exit(0)
 		}
@@ -43,12 +45,16 @@ func main() {
 
 	tkn, err := getToken()
 	if err != nil {
-		fmt.Printf("error: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to get github token due to %s\n", err)
 		os.Exit(1)
 	}
 
 	var mp *multiprinter
 	repos, err := listGithubRepositories(tkn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to get repositories due to %s\n", err)
+		os.Exit(1)
+	}
 	cache := filepath.Join(homedir, cacheFileName)
 	f, err := os.OpenFile(cache, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err == nil {

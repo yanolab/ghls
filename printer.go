@@ -23,12 +23,12 @@ func (p *multiprinter) Print(repo repository) error {
 	return nil
 }
 
-type stdprinter struct {
-	io.Writer
+type ioprinter struct {
+	w      io.Writer
 	params string
 }
 
-func (p *stdprinter) Print(repo repository) error {
+func (p *ioprinter) Print(repo repository) error {
 	parts := strings.Split(p.params, ",")
 
 	buf := make([]string, 0)
@@ -40,8 +40,8 @@ func (p *stdprinter) Print(repo repository) error {
 			buf = append(buf, repo.FullName)
 		case "owner":
 			buf = append(buf, repo.Owner)
-		case "star_count":
-			buf = append(buf, strconv.Itoa(repo.StartCount))
+		case "stars":
+			buf = append(buf, strconv.Itoa(repo.Stars))
 		case "pushed_at":
 			buf = append(buf, repo.PushedAt.String())
 		case "created_at":
@@ -56,16 +56,16 @@ func (p *stdprinter) Print(repo repository) error {
 	}
 
 	if len(buf) > 0 {
-		_, err := fmt.Fprintln(p.Writer, strings.Join(buf, " "))
+		_, err := fmt.Fprintln(p.w, strings.Join(buf, " "))
 		return err
 	}
 
-	_, err := fmt.Fprintln(p.Writer, repo.FullName)
+	_, err := fmt.Fprintln(p.w, repo.FullName)
 	return err
 }
 
 type jsonprinter struct {
-	io.Writer
+	w io.Writer
 }
 
 func (p *jsonprinter) Print(repo repository) error {
@@ -73,6 +73,6 @@ func (p *jsonprinter) Print(repo repository) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(p.Writer, string(buf))
+	_, err = fmt.Fprintln(p.w, string(buf))
 	return err
 }
