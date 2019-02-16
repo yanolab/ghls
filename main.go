@@ -45,12 +45,16 @@ func main() {
 
 	tkn, err := getToken()
 	if err != nil {
-		fmt.Printf("error: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to get github token due to %s\n", err)
 		os.Exit(1)
 	}
 
 	var mp *multiprinter
 	repos, err := listGithubRepositories(tkn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to get repositories due to %s\n", err)
+		os.Exit(1)
+	}
 	cache := filepath.Join(homedir, cacheFileName)
 	f, err := os.OpenFile(cache, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err == nil {

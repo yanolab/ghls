@@ -72,13 +72,7 @@ func getToken() (string, error) {
 
 func listGithubRepositories(token string) ([]repository, error) {
 	ctx := context.Background()
-
-	tkn, err := getToken()
-	if err != nil {
-		return nil, err
-	}
-
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: tkn})
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
@@ -90,7 +84,7 @@ func listGithubRepositories(token string) ([]repository, error) {
 	for {
 		repos, res, err := client.Repositories.List(ctx, "", opt)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		for _, repo := range repos {
