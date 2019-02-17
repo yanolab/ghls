@@ -1,6 +1,9 @@
 # ghls
 
-ghls is a tool to display own github repositories written by golang.
+ghls is a tool to display own github repositories written by golang.\
+![cicleci](https://img.shields.io/circleci/project/github/yanolab/ghls.svg?label=circleci&style=popout)
+![license](https://img.shields.io/github/license/yanolab/ghls.svg?style=popout)
+![goversion](https://img.shields.io/badge/Go-1.11-green.svg)
 
 ## Installation
 
