@@ -27,7 +27,7 @@ func init() {
 	}
 	params.homedir = dir
 
-	flag.BoolVar(&params.update, "u", false, "get and update repositories")
+	flag.BoolVar(&params.update, "u", false, "get and update repositories cache")
 	flag.StringVar(&params.params, "p", "", "print value by paramters")
 	flag.StringVar(&params.user, "user", "", "target user")
 	flag.BoolVar(&params.disableCache, "disablecache", false, "caching is disable")
