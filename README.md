@@ -47,6 +47,8 @@ $ ghls -user golang -p stars,name -disablecache | sort -n -r | head -n 5
 ```
 
 Combination with peco, fzf, hub.\
-Finding a repository with a fuzzy search and open its browser.\
+Finding a repository with a fuzzy search and open its browser.
+
 `$ ghls -user golang -p fullname,description -disablecache | fzf | awk '{print $1}' | xargs hub browse`
+
 ![demo](doc/example.gif)
