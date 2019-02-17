@@ -69,5 +69,5 @@ workflows:
           filters: *default_filter
       - review:
           requires:
-            - test
+            - build
           filters: *default_filter
