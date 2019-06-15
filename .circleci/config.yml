@@ -4,7 +4,7 @@ executors:
   default:
     working_directory: /go/src/github.com/yanolab/ghls
     docker:
-      - image: circleci/golang:1.11-stretch
+      - image: circleci/golang:1.12-stretch
     environment:
       GO111MODULE: "on"
 
@@ -41,7 +41,7 @@ jobs:
       - run:
           name: Setup reviewdog
           command: |
-            GO111MODULE=off go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+            curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b $(go env GOPATH)/bin
             GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
       - run:
           name: review

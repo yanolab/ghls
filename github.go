@@ -21,15 +21,16 @@ var (
 )
 
 type repository struct {
-	Name        string    `json:"name"`
-	FullName    string    `json:"fullname"`
-	Description string    `json:"description"`
-	Owner       string    `json:"owner"`
-	Stars       int       `json:"stars"`
-	URL         string    `json:"url"`
-	PushedAt    time.Time `json:"pushed_at"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	Name          string    `json:"name"`
+	FullName      string    `json:"fullname"`
+	Description   string    `json:"description"`
+	Owner         string    `json:"owner"`
+	Stars         int       `json:"stars"`
+	URL           string    `json:"url"`
+	DefaultBranch string    `json:"default_branch"`
+	PushedAt      time.Time `json:"pushed_at"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 func getTokenFromHub() (string, error) {
@@ -113,15 +114,16 @@ func listGithubRepositories(opts ...listOption) ([]repository, error) {
 
 		for _, repo := range repos {
 			r := repository{
-				Name:        repo.GetName(),
-				FullName:    repo.GetFullName(),
-				Description: repo.GetDescription(),
-				Owner:       repo.GetOwner().GetLogin(),
-				Stars:       repo.GetStargazersCount(),
-				PushedAt:    repo.GetPushedAt().UTC(),
-				URL:         repo.GetHTMLURL(),
-				CreatedAt:   repo.GetCreatedAt().UTC(),
-				UpdatedAt:   repo.GetUpdatedAt().UTC(),
+				Name:          repo.GetName(),
+				FullName:      repo.GetFullName(),
+				Description:   repo.GetDescription(),
+				Owner:         repo.GetOwner().GetLogin(),
+				Stars:         repo.GetStargazersCount(),
+				PushedAt:      repo.GetPushedAt().UTC(),
+				URL:           repo.GetHTMLURL(),
+				DefaultBranch: repo.GetDefaultBranch(),
+				CreatedAt:     repo.GetCreatedAt().UTC(),
+				UpdatedAt:     repo.GetUpdatedAt().UTC(),
 			}
 			repositories = append(repositories, r)
 		}

@@ -52,6 +52,8 @@ func (p *ioprinter) Print(repo repository) error {
 			buf = append(buf, repo.Description)
 		case "url":
 			buf = append(buf, repo.URL)
+		case "default_branch":
+			buf = append(buf, repo.DefaultBranch)
 		}
 	}
 
