@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	home "github.com/mitchellh/go-homedir"
 )
 
 type _params struct {
@@ -20,8 +18,8 @@ type _params struct {
 
 var params _params
 
-func init() {
-	dir, err := home.Dir()
+func parseFlag() {
+	dir, err := os.UserHomeDir()
 	if err != nil {
 		panic("cannot find homedir")
 	}
@@ -43,6 +41,8 @@ func printRepositories(p printer, repos []repository) {
 }
 
 func main() {
+	parseFlag()
+
 	if params.cleanCache {
 		p := filepath.Join(params.homedir, cacheFileName)
 		if err := os.Remove(p); err != nil {
