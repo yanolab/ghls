@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/go-yaml/yaml"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v52/github"
 	"golang.org/x/oauth2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
