@@ -1,13 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func TestReadCache(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
